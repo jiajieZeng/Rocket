@@ -6,6 +6,76 @@ rocket 同样是基于主从 Reactor 架构，底层采用 epoll 实现 IO 多�
 
 这个项目会以龟速进行开发，可能很久才commit一次。
 
+## 环境配置
+### 环境搭建
+* 开发环境：Linux服务器, 我使用的操作系统是Ubuntu18.06 TLS。使用GCC/G++, 目前使用C++11进行开发
+* 开发工具：VsCode
+### 目录层次结构
+```
+Rocket
+  ├─bin         
+  │  └─测试程序，可执行层序
+  ├─conf        
+  │  └─测试用的xml配置文件
+  ├─lib         
+  │  └─编译完成的静态库librocket.a
+  ├─obj         
+  │  └─所有编译主键文件,*.o
+  ├─rocket      
+  │  └─所有源代码
+  └─testcases   
+     └─测试代码
+    
+```
+### 依赖库
+#### protobuf
+protobuf-3.19.4
+安装过程：
+```
+cd ~
+
+wget https://github.com/protocolbuffers/protobuf/releases/download/v3.19.4/protobuf-cpp-3.19.4.tar.gz
+
+tar -xzvf protobuf-cpp-3.19.4.tar.gz
+```
+指定安装路径：
+```
+cd protobuf-cpp-3.19.4
+
+./configure -prefix=/usr/local
+
+make -j4 
+
+sudo make install
+```
+安装完成后，你可以找到头文件将位于 /usr/include/google 下，库文件将位于 /usr/lib 下。
+
+#### tinyxml
+项目中使用到了配置模块，采用了 xml 作为配置文件。因此需要安装 libtinyxml 解析 xml 文件。
+```
+wget https://udomain.dl.sourceforge.net/project/tinyxml/tinyxml/2.6.2/tinyxml_2_6_2.zip
+
+unzip tinyxml_2_6_2.zip
+```
+
+需要修改tinyxml的`Makefile`文件：
+* 将其中的`OUTPUT := xmltest`一行修改为：`OUTPUT := libtinyxml.a`
+* 将`xmltest.cpp`从`SRCS：=tinyxml.cpp tinyxml-parser.cpp xmltest.cpp tinyxmlerror.cpp tinystr.cpp`中删除
+* 注释掉`xmltest.o：tinyxml.h tinystr.h`。因为不需要将演示程序添加到动态库中。
+* 将`${LD} -o 
+{LDFLAGS} ${OBJS} ${LIBS} ${EXTRA_LIBS}` 修改为：`${AR} 
+{LDFLAGS} ${OBJS} ${LIBS} ${EXTRA_LIBS}`
+
+
+修改好之后：
+```
+make -j4
+```
+
+把`libtimyxml.a`复制到`/usr/lib/`
+把`make`产生的`.h`文件，全部放入一个新的叫`tinyxml`的文件夹里面，移动到`/usr/include/`
+
+
 ### 日志开发
 日志模块：
 ```
@@ -37,4 +107,43 @@ Thread id
 [level][%y-%m-%d %H:%M:%s.%ms]\t[pid:thread_id]\t[file_name:line][%msg]
 ```
 
-Logger 日志器 1.提供打印日志的方法 2.设置日志输出的路径
+Logger 日志器:
+* 提供打印日志的方法 
+* 设置日志输出的路径
+
+### Reactor
+Reactor，又可以称为 EventLoop，它的本质是一个事件循环模型。
+
+Rractor(或称 EventLoop)，它的核心逻辑是一个 loop 循环，使用伪代码描述如下：
+```
+void loop() {
+  while(!stop) {
+      foreach (task in tasks) {
+        task();
+      }
+
+      // 1.取得下次定时任务的时间，与设定time_out去较大值，即若下次定时任务时间超过1s就取下次定时任务时间为超时时间，否则取1s
+      int time_out = Max(1000, getNextTimerCallback());
+      // 2.调用Epoll等待事件发生，超时时间为上述的time_out
+      int rt = epoll_wait(epfd, fds, ...., time_out); 
+      if(rt < 0) {
+          // epoll调用失败。。
+      } else {
+          if (rt > 0 ) {
+            foreach (fd in fds) {
+              // 添加待执行任务到执行队列
+              tasks.push(fd);
+            }
+          }
+      } 
+  }
+}
+```
+
+在 rocket 里面，使用的是主从 Reactor 模型。
+服务器有一个mainReactor和多个subReactor。
+
+mainReactor由主线程运行，他作用如下：通过epoll监听listenfd的可读事件，当可读事件发生后，调用accept函数获取clientfd，然后随机取出一个subReactor，将cliednfd的读写事件注册到这个subReactor的epoll上即可。也就是说，mainReactor只负责建立连接事件，不进行业务处理，也不关心已连接套接字的IO事件。
+
+subReactor通常有多个，每个subReactor由一个线程来运行。subReactor的epoll中注册了clientfd的读写事件，当发生IO事件后，需要进行业务处理。
+
