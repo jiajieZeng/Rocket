@@ -8,7 +8,7 @@ rocket 同样是基于主从 Reactor 架构，底层采用 epoll 实现 IO 多�
 
 ## 环境配置
 ### 环境搭建
-* 开发环境：Linux服务器, 我使用的操作系统是Ubuntu18.06 TLS。使用GCC/G++, 目前使用C++11进行开发
+* 开发环境：Linux服务器, 操作系统是Ubuntu18.04.4 TLS。使用GCC/G++, 目前使用C++11进行开发
 * 开发工具：VsCode
 ### 目录层次结构
 ```
