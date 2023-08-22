@@ -17,6 +17,8 @@ public:
 
     FdEvent(int fd);
     
+    FdEvent();
+
     ~FdEvent();
 
     std::function<void()> handler(TriggerEvent event_type);     // 根据event_type返回一个函数

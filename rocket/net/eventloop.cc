@@ -52,6 +52,7 @@ EventLoop::EventLoop() {
     }
 
     initWakeUpFdEvent();
+    initTimer();
     // epoll_event = event;
     // event.events = EPOLLIN; //监听读事件
     // int rt = epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, m_epoll_fd, &event);
@@ -72,6 +73,21 @@ EventLoop::~EventLoop() {
         delete m_wakeup_fd_event;
         m_wakeup_fd_event = NULL;
     }
+
+    if (m_timer) {
+        delete m_timer;
+        m_timer = NULL;
+    }
+}
+
+void EventLoop::initTimer() {
+    m_timer = new Timer();
+    addEpollEvent(m_timer);
+}
+
+void EventLoop::addTimerEvent(TimerEvent::s_ptr event) {
+    DEBUGLOG("add Timer Event in eventloop");
+    m_timer->addTimerEvent(event);
 }
 
 void EventLoop::initWakeUpFdEvent() {
@@ -99,7 +115,7 @@ void EventLoop::loop() {
         ScopeMutex<Mutex> lock(m_mutex);
         std::queue<std::function<void()>> tmp_tasks;
         m_pending_tasks.swap(tmp_tasks);
-        lock.unlock();  // ?? 这里似乎没有把pending_tasks的任务弹出来，好像队列会无限增长
+        lock.unlock();  
         while (!tmp_tasks.empty()) {
             std::function<void()> cb = tmp_tasks.front();
             // tmp_tasks.front()();    // 执行函数
@@ -108,6 +124,10 @@ void EventLoop::loop() {
                 cb();
             }
         }
+
+        // 如果有定时任务需要执行，那么执行
+        // 1.怎么判断一个定时任务需要执行？(now() > TimerEvent.arrive_time)
+        // 2.arrive_time 如何让eventloop监听
         int timeout = g_epoll_max_timeout;
         epoll_event result_events[g_epoll_max_events];
         
@@ -122,6 +142,7 @@ void EventLoop::loop() {
                 epoll_event trigger_event = result_events[i];
                 FdEvent* fd_event = static_cast<FdEvent*>(trigger_event.data.ptr);
                 if (fd_event == NULL) {
+                    ERRORLOG("fd_event == NULL, continue");
                     continue;
                 }
                 if (trigger_event.events & EPOLLIN) {

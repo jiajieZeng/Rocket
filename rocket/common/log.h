@@ -12,7 +12,7 @@
 
 
 #define DEBUGLOG(str, ...) \
-    if (rocket::Logger::GetGlobalLogger()->getLogLevel() == rocket::Debug) \
+    if (rocket::Logger::GetGlobalLogger()->getLogLevel() && rocket::Logger::GetGlobalLogger()->getLogLevel() <= rocket::Debug) \
     { \
         rocket::Logger::GetGlobalLogger()->pushLog((new rocket::LogEvent(rocket::LogLevel::Debug))->toString() \
         + "[" + std::string(__FILE__) + ":" + std::to_string(__LINE__) + "]\t" + rocket::formatString(str, ##__VA_ARGS__) + "\n");\
@@ -20,7 +20,7 @@
     }\
 
 #define INFOLOG(str, ...) \
-    if (rocket::Logger::GetGlobalLogger()->getLogLevel() == rocket::Info) \
+    if (rocket::Logger::GetGlobalLogger()->getLogLevel() <= rocket::Info) \
     { \
         rocket::Logger::GetGlobalLogger()->pushLog((new rocket::LogEvent(rocket::LogLevel::Info))->toString() \
         + "[" + std::string(__FILE__) + ":" + std::to_string(__LINE__) + "]\t" + rocket::formatString(str, ##__VA_ARGS__) + "\n");\
@@ -28,7 +28,7 @@
     }\
 
 #define ERRORLOG(str, ...) \
-    if (rocket::Logger::GetGlobalLogger()->getLogLevel() == rocket::Error) \
+    if (rocket::Logger::GetGlobalLogger()->getLogLevel() <= rocket::Error) \
     { \
         rocket::Logger::GetGlobalLogger()->pushLog((new rocket::LogEvent(rocket::LogLevel::Error))->toString() \
         + "[" + std::string(__FILE__) + ":" + std::to_string(__LINE__) + "]\t" + rocket::formatString(str, ##__VA_ARGS__) + "\n");\
