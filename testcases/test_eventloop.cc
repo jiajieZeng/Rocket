@@ -11,6 +11,7 @@
 #include "rocket/net/eventloop.h"
 #include "rocket/net/timer.h"
 #include "rocket/net/io_thread.h"
+#include "rocket/net/io_thread_group.h"
 
 void test_io_thread() {
     int listenfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -22,7 +23,7 @@ void test_io_thread() {
     
     memset(&addr, 0, sizeof(addr));
     
-    addr.sin_port = htons(12346);
+    addr.sin_port = htons(12348);
     addr.sin_family = AF_INET;
     
     inet_aton("127.0.0.1", &addr.sin_addr);
@@ -55,12 +56,22 @@ void test_io_thread() {
         INFOLOG("trigger timer event, count=%d", i++);
     });
 
-    rocket::IOThread io_thread;
-    io_thread.getEventLoop()->addEpollEvent(&event);
-    io_thread.getEventLoop()->addTimerEvent(timer_event);
-    io_thread.start();
-    io_thread.join();
+    // rocket::IOThread io_thread;
+    // io_thread.getEventLoop()->addEpollEvent(&event);
+    // io_thread.getEventLoop()->addTimerEvent(timer_event);
+    // io_thread.start();
+    // io_thread.join();
 
+    rocket::IOThreadGroup io_thread_group(2);
+    rocket::IOThread* io_thread = io_thread_group.getIOThread();
+    io_thread->getEventLoop()->addEpollEvent(&event);
+    io_thread->getEventLoop()->addTimerEvent(timer_event);
+
+    rocket::IOThread* io_thread2 = io_thread_group.getIOThread();
+    io_thread2->getEventLoop()->addTimerEvent(timer_event);
+
+    io_thread_group.start();
+    io_thread_group.join();
 }
 
 int main() {

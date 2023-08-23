@@ -4,7 +4,6 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include "rocket/net/eventloop.h"
-#include "rocket/common/util.h"
 
 namespace rocket {
 
