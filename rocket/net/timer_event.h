@@ -9,7 +9,7 @@ namespace rocket {
 class TimerEvent {
 
 public:
-    typedef std::shared_ptr<TimerEvent> s_ptr;
+    using s_ptr = std::shared_ptr<TimerEvent>;
 
     TimerEvent(int64_t interval, bool is_repeated, std::function<void()> cb);
 
