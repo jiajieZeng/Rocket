@@ -147,3 +147,42 @@ mainReactor由主线程运行，他作用如下：通过epoll监听listenfd的�
 
 subReactor通常有多个，每个subReactor由一个线程来运行。subReactor的epoll中注册了clientfd的读写事件，当发生IO事件后，需要进行业务处理。
 
+### TimerEvent 定时任务
+```
+1. 指定时间点 arrive_time
+2. interval ms
+3. is_repeated
+4. is_cancled
+5. task
+
+cancle()
+cancleRepeated()
+```
+
+### Timer
+定时器，是一个 TimerEvent 的集合
+Timer 继承 FdEvent
+```
+addTimerEvent();
+deleteTimerEvent();
+
+onTimer();  // 发生了 IO 事件之后，需要执行的方法
+
+resetArriveTime();
+
+multimap 存储， TimerEvent <key(arrivetime), value(TimerEvent)>
+```
+
+### IO 线程
+创建一个 IO 线程，它会帮我们执行：
+* 创建一个新线程(pthread_create)
+* 在新线程里面，创建一个 Eventloop，完成初始化
+* 开启 loop
+```
+class {
+
+  pthread_t m_thread;
+  pid_t m_thread_id;
+  EventLoop event_loop;
+}
+```
