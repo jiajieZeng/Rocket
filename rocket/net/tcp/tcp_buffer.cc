@@ -38,7 +38,7 @@ void TcpBuffer::writeToBuffer(char const* buf, int size) {
     memcpy(&m_buffer[m_write_index], buf, size);
 }
 
-void resizeBuffer(int new_size) {
+void TcpBuffer::resizeBuffer(int new_size) {
     std::vector<char> tmp(new_size);
 
     int count = std::min(new_size, readAble());
@@ -51,7 +51,7 @@ void resizeBuffer(int new_size) {
     m_size = new_size;
 }
 
-void TcpBuffer::readFromBuffer(std::vector<char>& re) {
+void TcpBuffer::readFromBuffer(std::vector<char>& re, int size) {
     if (readAble() == 0) {
         return;
     }

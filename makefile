@@ -1,9 +1,3 @@
-##################################
-# makefile
-# ikerli
-# 2022-05-23
-##################################
-
 PATH_BIN = bin
 PATH_LIB = lib
 PATH_OBJ = obj
@@ -49,9 +43,9 @@ CODER_OBJ := $(patsubst $(PATH_CODER)/%.cc, $(PATH_OBJ)/%.o, $(wildcard $(PATH_C
 RPC_OBJ := $(patsubst $(PATH_RPC)/%.cc, $(PATH_OBJ)/%.o, $(wildcard $(PATH_RPC)/*.cc))
 
 # ALL_TESTS : $(PATH_BIN)/test_log $(PATH_BIN)/test_eventloop $(PATH_BIN)/test_tcp $(PATH_BIN)/test_client $(PATH_BIN)/test_rpc_client $(PATH_BIN)/test_rpc_server
-ALL_TESTS : $(PATH_BIN)/test_log $(PATH_BIN)/test_eventloop
+ALL_TESTS : $(PATH_BIN)/test_log $(PATH_BIN)/test_eventloop $(PATH_BIN)/test_tcp
 
-TEST_CASE_OUT := $(PATH_BIN)/test_log $(PATH_BIN)/test_eventloop # $(PATH_BIN)/test_tcp $(PATH_BIN)/test_client  $(PATH_BIN)/test_rpc_client $(PATH_BIN)/test_rpc_server
+TEST_CASE_OUT := $(PATH_BIN)/test_log $(PATH_BIN)/test_eventloop $(PATH_BIN)/test_tcp # $(PATH_BIN)/test_client  $(PATH_BIN)/test_rpc_client $(PATH_BIN)/test_rpc_server
 
 LIB_OUT := $(PATH_LIB)/librocket.a
 
@@ -61,8 +55,8 @@ $(PATH_BIN)/test_log: $(LIB_OUT)
 $(PATH_BIN)/test_eventloop: $(LIB_OUT)
 	$(CXX) $(CXXFLAGS) $(PATH_TESTCASES)/test_eventloop.cc -o $@ $(LIB_OUT) $(LIBS) -ldl -pthread
 
-# $(PATH_BIN)/test_tcp: $(LIB_OUT)
-# 	$(CXX) $(CXXFLAGS) $(PATH_TESTCASES)/test_tcp.cc -o $@ $(LIB_OUT) $(LIBS) -ldl -pthread
+$(PATH_BIN)/test_tcp: $(LIB_OUT)
+	$(CXX) $(CXXFLAGS) $(PATH_TESTCASES)/test_tcp.cc -o $@ $(LIB_OUT) $(LIBS) -ldl -pthread
 
 # $(PATH_BIN)/test_client: $(LIB_OUT)
 # 	$(CXX) $(CXXFLAGS) $(PATH_TESTCASES)/test_client.cc -o $@ $(LIB_OUT) $(LIBS) -ldl -pthread
