@@ -13,10 +13,12 @@
         op = EPOLL_CTL_MOD; \
     } \
     epoll_event tmp = event->getEpollEvent(); \
+    INFOLOG("epoll_event.events = %d", (int)tmp.events); \
     int rt = epoll_ctl(m_epoll_fd, op, event->getFd(), &tmp); \
     if (rt == -1) { \
         ERRORLOG("failed epoll_ctl when adding fd, errno=%d, error info=%s", errno, strerror(errno)); \
     } \
+    m_listen_fds.insert(event->getFd()); \
     DEBUGLOG("add event success, fd[%d]", event->getFd()); \
 
 #define DELETE_TO_EPOLL() \
@@ -30,6 +32,7 @@
     if (rt == -1) { \
         ERRORLOG("failed epoll_ctl when add fd, errno=%d, error=%s", errno, strerror(errno)); \
     } \
+    m_listen_fds.erase(event->getFd()); \
     DEBUGLOG("delete event success, fd[%d]", event->getFd()); \
 
 namespace rocket {
@@ -98,6 +101,8 @@ void EventLoop::initWakeUpFdEvent() {
         ERRORLOG("failed to create event loop, eventfd create error, error info[%d]", errno);
         exit(0);
     }
+    INFOLOG("wakeup fd = %d", m_wakeup_fd);
+
 
     m_wakeup_fd_event = new WakeUpFdEvent(m_wakeup_fd);
     m_wakeup_fd_event->listen(FdEvent::IN_EVENT, [this]() {
@@ -131,12 +136,12 @@ void EventLoop::loop() {
         int timeout = g_epoll_max_timeout;
         epoll_event result_events[g_epoll_max_events];
         
-        DEBUGLOG("now begin to epoll_wait");
+        // DEBUGLOG("now begin to epoll_wait");
         int rt = epoll_wait(m_epoll_fd, result_events, g_epoll_max_events, timeout);
-        DEBUGLOG("end epoll_wait rt = %d", rt);
+        // DEBUGLOG("end epoll_wait rt = %d", rt);
 
         if (rt < 0) {
-            ERRORLOG("epoll_wait error, errno=", errno);
+            ERRORLOG("epoll_wait error, errno=%d, error=%s", errno, strerror(errno));
         } else {
             for (int i = 0; i < rt; i++) {
                 epoll_event trigger_event = result_events[i];
@@ -160,11 +165,13 @@ void EventLoop::loop() {
 }
 
 void EventLoop::wakeup() {
+    INFOLOG("WAKE UP");
     m_wakeup_fd_event->wakeup();
 }
 
 void EventLoop::stop() {
     m_stop_flag = true;
+    wakeup();
 }    
 
 void EventLoop::addEpollEvent(FdEvent* event) {
@@ -178,7 +185,7 @@ void EventLoop::addEpollEvent(FdEvent* event) {
     }
 }
 
-void EventLoop::delelteEpollEvent(FdEvent* event) {
+void EventLoop::deleteEpollEvent(FdEvent* event) {
     if (isInLoopThread()) {
         DELETE_TO_EPOLL();
     } else {

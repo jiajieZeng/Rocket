@@ -52,6 +52,7 @@ private:
     int m_write_index {0};
     int m_size {0};
 
+public:
     std::vector<char> m_buffer;
 
 };

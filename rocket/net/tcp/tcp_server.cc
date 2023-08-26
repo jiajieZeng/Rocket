@@ -1,6 +1,7 @@
 #include "rocket/net/tcp/tcp_server.h"
 #include "rocket/common/log.h"
 #include "rocket/net/eventloop.h"
+#include "rocket/net/tcp/tcp_connection.h"
 
 namespace rocket {
 
@@ -22,12 +23,19 @@ void TcpServer::start() {
 }
 
 void TcpServer::OnAccept() {
-    int client_fd = m_acceptor->accept();
+    auto re = m_acceptor->accept();
+    
+    int client_fd = re.first;
+
+    NetAddr::s_ptr peer_addr = re.second;
 
     ++m_client_counts;
 
-    // TODO: 把clientfd添加到一个IOTrhead
-
+    // 把clientfd添加到一个IOTrhead
+    IOThread* io_thread = m_io_thread_group->getIOThread();
+    TcpConnection::s_ptr connection = std::make_shared<TcpConnection>(io_thread, client_fd, 128, peer_addr);
+    connection->setState(TcpState::Connected);
+    m_clients.insert(connection);
     INFOLOG("TcpServer successfully get client, fd=%d", client_fd);
 
 }
@@ -37,7 +45,7 @@ void TcpServer::init() {
 
     m_main_event_loop = EventLoop::GetCurrentEventLoop();
 
-    m_io_thread_group = new IOThreadGroup(2);
+    m_io_thread_group = new IOThreadGroup(1);
 
     m_listen_fd_event = new FdEvent(m_acceptor->getListenFd());
 

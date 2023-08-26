@@ -26,7 +26,7 @@ public:
 
     void addEpollEvent(FdEvent* event);
 
-    void delelteEpollEvent(FdEvent* event);
+    void deleteEpollEvent(FdEvent* event);
 
     bool isInLoopThread();
 

@@ -1,11 +1,13 @@
 #ifndef ROCKET_NET_TCP_TCP_SERVER_H
 #define ROCKET_NET_TCP_TCP_SERVER_H
 
+#include <set>
 #include "rocket/net/tcp/tcp_acceptor.h"
 #include "rocket/net/eventloop.h"
 #include "rocket/net/tcp/net_addr.h"
 #include "rocket/net/io_thread_group.h"
 #include "rocket/net/fd_event.h"
+#include "rocket/net/tcp/tcp_connection.h"
 
 namespace rocket {
 
@@ -35,6 +37,8 @@ private:
     FdEvent* m_listen_fd_event;
 
     int m_client_counts {0};
+
+    std::set<TcpConnection::s_ptr> m_clients;
 };
 
 };

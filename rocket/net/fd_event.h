@@ -21,9 +21,13 @@ public:
 
     ~FdEvent();
 
+    void setNonBlock();
+
     std::function<void()> handler(TriggerEvent event_type);     // 根据event_type返回一个函数
 
     void listen(TriggerEvent event_type, std::function<void()> callback);   // 监听函数
+
+    void cancle(TriggerEvent event_type); // 取消监听
 
     int getFd() const {
         return m_fd;
