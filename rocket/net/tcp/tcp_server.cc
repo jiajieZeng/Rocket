@@ -33,7 +33,7 @@ void TcpServer::OnAccept() {
 
     // 把clientfd添加到一个IOTrhead
     IOThread* io_thread = m_io_thread_group->getIOThread();
-    TcpConnection::s_ptr connection = std::make_shared<TcpConnection>(io_thread, client_fd, 128, peer_addr);
+    TcpConnection::s_ptr connection = std::make_shared<TcpConnection>(io_thread->getEventLoop(), client_fd, 128, peer_addr);
     connection->setState(TcpState::Connected);
     m_clients.insert(connection);
     INFOLOG("TcpServer successfully get client, fd=%d", client_fd);

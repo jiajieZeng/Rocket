@@ -5,8 +5,8 @@
 
 namespace rocket {
 
-TcpConnection::TcpConnection(IOThread* io_thread, int fd, int buffer_size, NetAddr::s_ptr peer_addr)
-    : m_io_thread(io_thread), m_fd(fd), m_peer_addr(peer_addr), m_state(NotConnected) {
+TcpConnection::TcpConnection(EventLoop* eventloop, int fd, int buffer_size, NetAddr::s_ptr peer_addr)
+    : m_event_loop(eventloop), m_fd(fd), m_peer_addr(peer_addr), m_state(NotConnected) {
     m_in_buffer = std::make_shared<TcpBuffer> (buffer_size);
     m_out_buffer = std::make_shared<TcpBuffer> (buffer_size);
 
@@ -15,7 +15,7 @@ TcpConnection::TcpConnection(IOThread* io_thread, int fd, int buffer_size, NetAd
     // 发生可读事件，调用读回调函数
     m_fd_event->listen(FdEvent::IN_EVENT, std::bind(&TcpConnection::onRead, this));  
 
-    io_thread->getEventLoop()->addEpollEvent(m_fd_event); 
+    m_event_loop->addEpollEvent(m_fd_event); 
 }
 
 TcpConnection::~TcpConnection() {
@@ -99,7 +99,7 @@ void TcpConnection::execute() {
     // 监听写回调函数
     m_fd_event->listen(FdEvent::OUT_EVENT, std::bind(&TcpConnection::onWrite, this));
 
-    m_io_thread->getEventLoop()->addEpollEvent(m_fd_event);
+    m_event_loop->addEpollEvent(m_fd_event);
 
 }
 
@@ -140,7 +140,7 @@ void TcpConnection::onWrite() {
 
     if (is_write_all) {
         m_fd_event->cancle(FdEvent::OUT_EVENT);
-        m_io_thread->getEventLoop()->addEpollEvent(m_fd_event);
+        m_event_loop->addEpollEvent(m_fd_event);
     }
 
 }
@@ -159,7 +159,9 @@ void TcpConnection::clear() {
         return;
     }
 
-    m_io_thread->getEventLoop()->deleteEpollEvent(m_fd_event);
+    m_fd_event->cancle(FdEvent::IN_EVENT);
+    m_fd_event->cancle(FdEvent::OUT_EVENT);
+    m_event_loop->deleteEpollEvent(m_fd_event);
     m_state = Closed;
 }
 
@@ -176,6 +178,10 @@ void TcpConnection::shutdown() {
     // 当 fd 发生可读事件，但是可读数据为0时，即对端发送了 FIN 报文
     ::shutdown(m_fd, SHUT_RDWR);
 
+}
+
+void TcpConnection::setConnectionType(TcpConnetionType type) {
+    m_connection_type = type;
 }
 
 };
