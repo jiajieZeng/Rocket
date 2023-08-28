@@ -2,24 +2,31 @@
 #include "rocket/net/tcp/tcp_connection.h"
 #include "rocket/common/log.h"
 #include "rocket/net/fd_event_group.h"
+#include "rocket/net/string_coder.h"
 
 namespace rocket {
 
-TcpConnection::TcpConnection(EventLoop* eventloop, int fd, int buffer_size, NetAddr::s_ptr peer_addr)
-    : m_event_loop(eventloop), m_fd(fd), m_peer_addr(peer_addr), m_state(NotConnected) {
+TcpConnection::TcpConnection(EventLoop* eventloop, int fd, int buffer_size, NetAddr::s_ptr peer_addr, TcpConnetionType type /*= TcpConnectionByServer*/)
+    : m_event_loop(eventloop), m_fd(fd), m_peer_addr(peer_addr), m_state(NotConnected) , m_connection_type(type){
     m_in_buffer = std::make_shared<TcpBuffer> (buffer_size);
     m_out_buffer = std::make_shared<TcpBuffer> (buffer_size);
 
     m_fd_event = FdEventGroup::GetFdEventGroup()->getFdEvent(fd);
     m_fd_event->setNonBlock();
-    // 发生可读事件，调用读回调函数
-    m_fd_event->listen(FdEvent::IN_EVENT, std::bind(&TcpConnection::onRead, this));  
+    m_coder = new StringCoder();
 
-    m_event_loop->addEpollEvent(m_fd_event); 
+    if (m_connection_type == TcpConnectionByServer) {
+        listenRead();
+    }
+
 }
 
 TcpConnection::~TcpConnection() {
     DEBUGLOG("~TcpConnection ");
+    if (m_coder) {
+        delete m_coder;
+        m_coder = NULL;
+    }
 }
 
 
@@ -82,24 +89,36 @@ void TcpConnection::onRead() {
 }
 
 void TcpConnection::execute() {
-    // 将 RPC 请求执行业务逻辑， 获取 RPC 逻辑， 再把 RPC 响应发送回去
-    std::vector<char> tmp;
-    int size = m_in_buffer->readAble();
-    tmp.resize(size);
-    m_in_buffer->readFromBuffer(tmp, size);
+    if (m_connection_type == TcpConnectionByServer) {
+        // 将 RPC 请求执行业务逻辑， 获取 RPC 逻辑， 再把 RPC 响应发送回去
+        std::vector<char> tmp;
+        int size = m_in_buffer->readAble();
+        tmp.resize(size);
+        m_in_buffer->readFromBuffer(tmp, size);
 
-    std::string msg = "";
-    for (auto it: tmp) {
-        msg += it;
+        std::string msg = "";
+        for (auto it: tmp) {
+            msg += it;
+        }
+
+        INFOLOG("successfully get request[%s] from client [%s]", msg.c_str(), m_peer_addr->toString().c_str());
+
+        m_out_buffer->writeToBuffer(msg.c_str(), msg.length());
+        // 监听写回调函数
+        listenWrite();
+    } else {
+        std::vector<AbstractProtocol::s_ptr> result;
+        m_coder->decode(result, m_in_buffer);
+
+        for (size_t i = 0; i < result.size(); i++) {
+            std::string req_id = result[i]->getReqId();
+            auto it = m_read_dones.find(req_id);
+            if (it != m_read_dones.end()) {
+                it->second(result[i]);
+            }
+        }
+
     }
-
-    INFOLOG("successfully get request[%s] from client [%s]", msg.c_str(), m_peer_addr->toString().c_str());
-
-    m_out_buffer->writeToBuffer(msg.c_str(), msg.length());
-    // 监听写回调函数
-    m_fd_event->listen(FdEvent::OUT_EVENT, std::bind(&TcpConnection::onWrite, this));
-
-    m_event_loop->addEpollEvent(m_fd_event);
 
 }
 
@@ -109,6 +128,16 @@ void TcpConnection::onWrite() {
         ERRORLOG("onWrite error, client has already disconnected, addr [%s], clientfd [%d]", 
             m_peer_addr->toString().c_str(), m_fd);
         return;
+    }
+
+    if (m_connection_type == TcpConnectionByClient) {
+        // 将 message encode 得到字节流
+        // 将字节流写入 buffer 然后全部发送
+        std::vector<AbstractProtocol::s_ptr> messages;
+        for (size_t i = 0; i < m_write_dones.size(); i++) {
+            messages.push_back(m_write_dones[i].first);
+        }
+        m_coder->encode(messages, m_out_buffer);
     }
 
     bool is_write_all = false; 
@@ -143,6 +172,12 @@ void TcpConnection::onWrite() {
         m_event_loop->addEpollEvent(m_fd_event);
     }
 
+    if (m_connection_type == TcpConnectionByClient) {
+        for (size_t i = 0; i < m_write_dones.size(); i++) {
+            m_write_dones[i].second(m_write_dones[i].first);
+        }
+        m_write_dones.clear();
+    }
 }
 
 void TcpConnection::setState(const TcpState state) {
@@ -182,6 +217,28 @@ void TcpConnection::shutdown() {
 
 void TcpConnection::setConnectionType(TcpConnetionType type) {
     m_connection_type = type;
+}
+
+void TcpConnection::listenWrite() {
+    m_fd_event->listen(FdEvent::OUT_EVENT, std::bind(&TcpConnection::onWrite, this));
+    m_event_loop->addEpollEvent(m_fd_event);
+}
+
+void TcpConnection::listenRead() {
+    m_fd_event->listen(FdEvent::IN_EVENT, std::bind(&TcpConnection::onRead, this));
+    m_event_loop->addEpollEvent(m_fd_event);
+
+}
+
+
+void TcpConnection::pushSendMesage(AbstractProtocol::s_ptr message, std::function<void(AbstractProtocol::s_ptr)> done) {
+    m_write_dones.push_back(std::make_pair(message, done));
+}
+
+
+void TcpConnection::pushReadMesage(const std::string& req_id, std::function<void(AbstractProtocol::s_ptr)> done) {
+    // m_read_dones.insert(std::make_pair(req_id, done));
+    m_read_dones[req_id] = done;
 }
 
 };

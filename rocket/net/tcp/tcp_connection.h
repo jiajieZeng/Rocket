@@ -2,9 +2,14 @@
 #define ROCKET_NET_TCP_TCP_CONNECTION_H
 
 #include <memory>
+#include <vector>
+#include <map>  
+#include <functional>
 #include "rocket/net/tcp/net_addr.h"
 #include "rocket/net/tcp/tcp_buffer.h"
 #include "rocket/net/io_thread.h"
+#include "rocket/net/abstract_coder.h"
+#include "rocket/net/abstract_protocol.h"
 
 namespace rocket {
 
@@ -26,7 +31,7 @@ public:
 
     using s_ptr = std::shared_ptr<TcpConnection>; 
 
-    TcpConnection(EventLoop* eventloop, int fd, int buffer_size, NetAddr::s_ptr peer_addr);
+    TcpConnection(EventLoop* eventloop, int fd, int buffer_size, NetAddr::s_ptr peer_addr, TcpConnetionType type = TcpConnectionByServer);
 
     ~TcpConnection();
 
@@ -47,6 +52,16 @@ public:
 
     void setConnectionType(TcpConnetionType type);
 
+    // 启动监听可写事件
+    void listenWrite();
+
+    // 启动监听可读事件
+    void listenRead();
+
+    void pushSendMesage(AbstractProtocol::s_ptr message, std::function<void(AbstractProtocol::s_ptr)> done);
+
+    void pushReadMesage(const std::string& req_id, std::function<void(AbstractProtocol::s_ptr)> done);    
+
 private:
     EventLoop* m_event_loop {NULL};   // 当前持有该链接的 eventloop 
     int m_fd {0};
@@ -61,6 +76,13 @@ private:
     TcpState m_state;
     
     TcpConnetionType m_connection_type {TcpConnectionByServer};
+
+    AbstractCoder* m_coder {NULL};
+
+    // std::pair<AbstractProtocol::s_ptr, std::function<void(AbstractProtocol::s_ptr)>>
+    std::vector<std::pair<AbstractProtocol::s_ptr, std::function<void(AbstractProtocol::s_ptr)>>> m_write_dones;
+    
+    std::map<std::string, std::function<void(AbstractProtocol::s_ptr)> > m_read_dones;
 };
 
 };

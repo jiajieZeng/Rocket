@@ -21,7 +21,7 @@ TcpClient::TcpClient(NetAddr::s_ptr peer_addr) : m_peer_addr(peer_addr) {
     m_fd_event = FdEventGroup::GetFdEventGroup()->getFdEvent(m_fd);
     m_fd_event->setNonBlock();
 
-    m_connection = std::make_shared<TcpConnection>(m_event_loop, m_fd, 128, peer_addr);
+    m_connection = std::make_shared<TcpConnection>(m_event_loop, m_fd, 128, peer_addr, TcpConnectionByClient);
     m_connection->setConnectionType(TcpConnectionByClient);
 }
 
@@ -45,17 +45,22 @@ void TcpClient::connect(std::function<void()> done) {
                 int error = 0;
                 socklen_t error_len = sizeof(error);
                 getsockopt(m_fd, SOL_SOCKET, SO_ERROR, &error, &error_len);
+                bool is_connect_succ = false;
                 if (error == 0) {
                     DEBUGLOG("conncet [%s] success", m_peer_addr->toString().c_str());
-                    if (done) {
-                        done();
-                    }
+                    is_connect_succ = true;
+                    m_connection->setState(Connected);
                 } else {
                     ERRORLOG("connect error, errno=%d, error=%s", errno, strerror(errno));
                 }
                 // 需要去掉可写事件的监听
                 m_fd_event->cancle(FdEvent::OUT_EVENT);
                 m_event_loop->addEpollEvent(m_fd_event);
+                
+                // 如果连接成功，才执行回调函数
+                if (is_connect_succ && done) {
+                    done();
+                }
             });
 
             m_event_loop->addEpollEvent(m_fd_event);
@@ -71,11 +76,18 @@ void TcpClient::connect(std::function<void()> done) {
 }
 
 void TcpClient::writeMessage(AbstractProtocol::s_ptr message, std::function<void(AbstractProtocol::s_ptr)> done) {
+    // 1.把 message 对象写入到 connection 的 buffer， done 也写入
+    // 2.启动 connection 可写事件的监听
+    m_connection->pushSendMesage(message, done);
+    m_connection->listenWrite();
 
 }   
 
-void TcpClient::readMessage(AbstractProtocol::s_ptr message, std::function<void(AbstractProtocol::s_ptr)> done) {
-
+void TcpClient::readMessage(const std::string& req_id, std::function<void(AbstractProtocol::s_ptr)> done) {
+    // 1. 监听可读事件
+    // 2. 从 buffer 里面 decode 得到message 对象
+    m_connection->pushReadMesage(req_id, done);
+    m_connection->listenRead();
 }   
 
 
