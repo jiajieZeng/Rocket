@@ -1,9 +1,9 @@
-#ifndef ROCKET_NET_ABSTRACT_CODER_H
-#define ROCKET_NET_ABSTRACT_CODER_H
+#ifndef ROCKET_NET_CODER_ABSTRACT_CODER_H
+#define ROCKET_NET_CODER_ABSTRACT_CODER_H
 
 #include <vector>
 #include "rocket/net/tcp/tcp_buffer.h"
-#include "rocket/net/abstract_protocol.h"
+#include "rocket/net/coder/abstract_protocol.h"
 
 namespace rocket {
 

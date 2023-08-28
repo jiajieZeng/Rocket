@@ -2,7 +2,8 @@
 #include "rocket/net/tcp/tcp_connection.h"
 #include "rocket/common/log.h"
 #include "rocket/net/fd_event_group.h"
-#include "rocket/net/string_coder.h"
+#include "rocket/net/coder/string_coder.h"
+#include "rocket/net/coder/tinypb_coder.h"
 
 namespace rocket {
 
@@ -13,7 +14,7 @@ TcpConnection::TcpConnection(EventLoop* eventloop, int fd, int buffer_size, NetA
 
     m_fd_event = FdEventGroup::GetFdEventGroup()->getFdEvent(fd);
     m_fd_event->setNonBlock();
-    m_coder = new StringCoder();
+    m_coder = new TinyPBCoder();
 
     if (m_connection_type == TcpConnectionByServer) {
         listenRead();
@@ -91,19 +92,23 @@ void TcpConnection::onRead() {
 void TcpConnection::execute() {
     if (m_connection_type == TcpConnectionByServer) {
         // 将 RPC 请求执行业务逻辑， 获取 RPC 逻辑， 再把 RPC 响应发送回去
-        std::vector<char> tmp;
-        int size = m_in_buffer->readAble();
-        tmp.resize(size);
-        m_in_buffer->readFromBuffer(tmp, size);
 
-        std::string msg = "";
-        for (auto it: tmp) {
-            msg += it;
+        std::vector<AbstractProtocol::s_ptr> result;
+        std::vector<AbstractProtocol::s_ptr> reply_messages;
+        m_coder->decode(result, m_in_buffer);
+        for (size_t i = 0; i < result.size(); i++) {
+            // 针对每一个请求，调用 rcp 方法，获取响应 message
+            // 将响应 message 放入到发送缓冲区，监听可写事件回包
+            INFOLOG("successfully get request[%s] from client [%s]", result[i]->m_req_id.c_str(), m_peer_addr->toString().c_str());
+            std::shared_ptr<TinyPBProtocol> message = std::make_shared<TinyPBProtocol>();
+            message->m_pb_data = "hello. this is rocket rpc test data";
+            message->m_req_id = result[i]->m_req_id;
+            
+            reply_messages.push_back(message);
         }
+        
+        m_coder->encode(reply_messages, m_out_buffer);
 
-        INFOLOG("successfully get request[%s] from client [%s]", msg.c_str(), m_peer_addr->toString().c_str());
-
-        m_out_buffer->writeToBuffer(msg.c_str(), msg.length());
         // 监听写回调函数
         listenWrite();
     } else {
@@ -111,7 +116,7 @@ void TcpConnection::execute() {
         m_coder->decode(result, m_in_buffer);
 
         for (size_t i = 0; i < result.size(); i++) {
-            std::string req_id = result[i]->getReqId();
+            std::string req_id = result[i]->m_req_id;
             auto it = m_read_dones.find(req_id);
             if (it != m_read_dones.end()) {
                 it->second(result[i]);
