@@ -17,12 +17,12 @@ public:
         return m_arrive_time;
     }
 
-    void setCancled(bool value) {
-        m_is_cancled = value;
+    void setCanceled(bool value) {
+        m_is_canceled = value;
     }
 
-    bool isCancled() {
-        return m_is_cancled;
+    bool isCanceled() {
+        return m_is_canceled;
     }
 
     bool isRepeated() {
@@ -39,7 +39,7 @@ private:
     int64_t m_arrive_time;  // ms
     int64_t m_interval;     // ms
     bool m_is_repeated {false};
-    bool m_is_cancled {false};
+    bool m_is_canceled {false};
     
     std::function<void()> m_task;
 

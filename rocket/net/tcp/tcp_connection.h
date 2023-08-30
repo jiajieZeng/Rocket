@@ -60,9 +60,9 @@ public:
     // 启动监听可读事件
     void listenRead();
 
-    void pushSendMesage(AbstractProtocol::s_ptr message, std::function<void(AbstractProtocol::s_ptr)> done);
+    void pushSendMessage(AbstractProtocol::s_ptr message, std::function<void(AbstractProtocol::s_ptr)> done);
 
-    void pushReadMesage(const std::string& req_id, std::function<void(AbstractProtocol::s_ptr)> done);    
+    void pushReadMessage(const std::string& msg_id, std::function<void(AbstractProtocol::s_ptr)> done);    
 
     NetAddr::s_ptr getLocalAddr();
     NetAddr::s_ptr getPeerAddr();

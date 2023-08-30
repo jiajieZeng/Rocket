@@ -152,11 +152,11 @@ subReactor通常有多个，每个subReactor由一个线程来运行。subReacto
 1. 指定时间点 arrive_time
 2. interval ms
 3. is_repeated
-4. is_cancled
+4. is_canceled
 5. task
 
-cancle()
-cancleRepeated()
+cancel()
+cancelRepeated()
 ```
 
 ### Timer

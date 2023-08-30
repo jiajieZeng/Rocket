@@ -14,7 +14,7 @@ public:
     virtual ~AbstractProtocol() {}
 
 public:
-    std::string m_req_id;   // 请求号，唯一标识一个请求或响应
+    std::string m_msg_id;   // 请求号，唯一标识一个请求或响应
 
 };
 

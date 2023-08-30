@@ -139,7 +139,7 @@ void EventLoop::loop() {
         
         // DEBUGLOG("now begin to epoll_wait");
         int rt = epoll_wait(m_epoll_fd, result_events, g_epoll_max_events, timeout);
-        // DEBUGLOG("end epoll_wait rt = %d", rt);
+        DEBUGLOG("end epoll_wait rt = %d", rt);
 
         if (rt < 0) {
             ERRORLOG("epoll_wait error, errno=%d, error=%s", errno, strerror(errno));
@@ -159,6 +159,15 @@ void EventLoop::loop() {
                     DEBUGLOG("fd %d trigger EPOLLOUT event", fd_event->getFd());
                     addTask(fd_event->handler(FdEvent::OUT_EVENT));
                 }
+                
+                if (trigger_event.events & EPOLLERR) {
+                    DEBUGLOG("fd %d trigger EPOLLERR event", fd_event->getFd());
+                    deleteEpollEvent(fd_event);
+                    if (fd_event->handler(FdEvent::ERROR_EVENT) != nullptr) {
+                        addTask(fd_event->handler(FdEvent::OUT_EVENT));
+                    }
+                }
+
             }
         }
     }

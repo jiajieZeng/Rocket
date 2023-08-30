@@ -43,7 +43,7 @@ void Timer::onTimer() {
     for (it = m_pending_events.begin(); it != m_pending_events.end(); ++it) {
         // 需要执行
         if ((*it).first <= now) {
-            if (!(*it).second->isCancled()) {
+            if (!(*it).second->isCanceled()) {
                 tmps.push_back((*it).second);
                 tasks.push_back(std::make_pair((*it).second->getArriveTime(), (*it).second->getCallBack()));
             } else {
@@ -99,7 +99,7 @@ void Timer::addTimerEvent(TimerEvent::s_ptr event) {
 }
 
 void Timer::deleteTimerEvent(TimerEvent::s_ptr event) {
-    event->setCancled(true);
+    event->setCanceled(true);
 
     ScopeMutex<Mutex> lock(m_mutex);
     auto begin = m_pending_events.lower_bound(event->getArriveTime());

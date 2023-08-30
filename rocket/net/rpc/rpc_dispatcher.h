@@ -1,5 +1,5 @@
-#ifndef ROCKET_NET_RPC_RCP_DISPATCHER_H
-#define ROCKET_NET_RPC_RCP_DISPATCHER_H
+#ifndef ROCKET_NET_RPC_Rpc_DISPATCHER_H
+#define ROCKET_NET_RPC_Rpc_DISPATCHER_H
 
 #include <map>
 #include <memory>

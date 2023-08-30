@@ -99,12 +99,12 @@ void TcpConnection::execute() {
         std::vector<AbstractProtocol::s_ptr> reply_messages;
         m_coder->decode(result, m_in_buffer);
         for (size_t i = 0; i < result.size(); i++) {
-            // 针对每一个请求，调用 rcp 方法，获取响应 message
+            // 针对每一个请求，调用 Rpc 方法，获取响应 message
             // 将响应 message 放入到发送缓冲区，监听可写事件回包
-            INFOLOG("successfully get request[%s] from client [%s]", result[i]->m_req_id.c_str(), m_peer_addr->toString().c_str());
+            INFOLOG("successfully get request[%s] from client [%s]", result[i]->m_msg_id.c_str(), m_peer_addr->toString().c_str());
             std::shared_ptr<TinyPBProtocol> message = std::make_shared<TinyPBProtocol>();
             // message->m_pb_data = "hello. this is rocket rpc test data";
-            // message->m_req_id = result[i]->m_req_id;
+            // message->m_msg_id = result[i]->m_msg_id;
             RpcDispatcher::GetRpcDispatcher()->dispatch(result[i], message, this); 
             reply_messages.push_back(message);
         }
@@ -118,8 +118,8 @@ void TcpConnection::execute() {
         m_coder->decode(result, m_in_buffer);
 
         for (size_t i = 0; i < result.size(); i++) {
-            std::string req_id = result[i]->m_req_id;
-            auto it = m_read_dones.find(req_id);
+            std::string msg_id = result[i]->m_msg_id;
+            auto it = m_read_dones.find(msg_id);
             if (it != m_read_dones.end()) {
                 it->second(result[i]);
             }
@@ -175,7 +175,7 @@ void TcpConnection::onWrite() {
     }
 
     if (is_write_all) {
-        m_fd_event->cancle(FdEvent::OUT_EVENT);
+        m_fd_event->cancel(FdEvent::OUT_EVENT);
         m_event_loop->addEpollEvent(m_fd_event);
     }
 
@@ -201,8 +201,8 @@ void TcpConnection::clear() {
         return;
     }
 
-    m_fd_event->cancle(FdEvent::IN_EVENT);
-    m_fd_event->cancle(FdEvent::OUT_EVENT);
+    m_fd_event->cancel(FdEvent::IN_EVENT);
+    m_fd_event->cancel(FdEvent::OUT_EVENT);
     m_event_loop->deleteEpollEvent(m_fd_event);
     m_state = Closed;
 }
@@ -238,14 +238,14 @@ void TcpConnection::listenRead() {
 }
 
 
-void TcpConnection::pushSendMesage(AbstractProtocol::s_ptr message, std::function<void(AbstractProtocol::s_ptr)> done) {
+void TcpConnection::pushSendMessage(AbstractProtocol::s_ptr message, std::function<void(AbstractProtocol::s_ptr)> done) {
     m_write_dones.push_back(std::make_pair(message, done));
 }
 
 
-void TcpConnection::pushReadMesage(const std::string& req_id, std::function<void(AbstractProtocol::s_ptr)> done) {
-    // m_read_dones.insert(std::make_pair(req_id, done));
-    m_read_dones[req_id] = done;
+void TcpConnection::pushReadMessage(const std::string& msg_id, std::function<void(AbstractProtocol::s_ptr)> done) {
+    // m_read_dones.insert(std::make_pair(msg_id, done));
+    m_read_dones[msg_id] = done;
 }
 
 NetAddr::s_ptr TcpConnection::getLocalAddr() {
