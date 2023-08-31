@@ -1,4 +1,4 @@
-#include "rocket/common/runtime.h"
+#include "rocket/common/run_time.h"
 
 namespace rocket {
 
@@ -9,6 +9,10 @@ RunTime* RunTime::GetRunTime() {
         t_run_time = new RunTime();
     }
     return t_run_time;
+}
+
+RpcInterface* RunTime::getRpcInterface() {
+  return m_rpc_interface;
 }
 
 }

@@ -1,5 +1,6 @@
 #include "rocket/net/tcp/tcp_server.h"
 #include "rocket/common/log.h"
+#include "rocket/common/config.h"
 #include "rocket/net/eventloop.h"
 #include "rocket/net/tcp/tcp_connection.h"
 
