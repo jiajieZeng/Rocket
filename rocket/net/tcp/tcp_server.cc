@@ -46,7 +46,7 @@ void TcpServer::init() {
 
     m_main_event_loop = EventLoop::GetCurrentEventLoop();
 
-    m_io_thread_group = new IOThreadGroup(1);
+    m_io_thread_group = new IOThreadGroup(Config::GetGlobalConfig()->m_io_threads);
 
     m_listen_fd_event = new FdEvent(m_acceptor->getListenFd());
 
