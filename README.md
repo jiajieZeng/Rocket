@@ -10,6 +10,16 @@ TODO:
 脚手架完善
 添加协程
 ```
+## 运行
+克隆仓库，创建./gitignore里面的文件夹。
+```
+make -j4
+
+cd ./bin
+./test_rpc_server
+./test_rpc_client
+```
+
 
 ## 环境配置
 ### 环境搭建
