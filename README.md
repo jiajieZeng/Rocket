@@ -4,11 +4,12 @@ rocket 是基于 C++11 开发的一款多线程的异步 RPC 框架，它旨在�
 
 rocket 同样是基于主从 Reactor 架构，底层采用 epoll 实现 IO 多路复用。应用层则基于 protobuf 自定义 rpc 通信协议，同时也将支持简单的 HTTP 协议。
 
-整个框架开发大致已经完结。直接自己make是可以运行的，但是如果用脚手架生成的暂时buggy，由于开学没时间调试了。
+整个框架开发大致已经完结。直接自己make是可以运行的，但是如果用脚手架生成的就有不够，由于开学没时间调试了。
 TODO:
 ```
 脚手架完善
 添加协程
+完善README
 ```
 ## 运行
 克隆仓库，创建.gitignore里面的文件夹。
@@ -200,4 +201,6 @@ class {
   pid_t m_thread_id;
   EventLoop event_loop;
 }
+
+to be done...
 ```
